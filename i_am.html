@@ -351,6 +351,7 @@
 
         // 상태 변수
         let currentPath = '/';
+        let isQuizMode = false;
         
         // 퀴즈 시스템용 상태 변수
         let currentQuizData = null;
@@ -487,6 +488,7 @@
                 quizContainer.classList.remove('hidden');
                 
                 // 퀴즈 상태 초기화 및 시작
+                isQuizMode = true;
                 currentQuizData = data;
                 currentQuestionIndex = 0;
                 currentScore = 0;
@@ -499,6 +501,8 @@
                 imgContainer.classList.remove('hidden');
                 descContainer.classList.remove('hidden');
                 quizContainer.classList.add('hidden');
+
+                isQuizMode = false;
 
                 // 내용 채우기
                 descContainer.textContent = data.detailDesc;
@@ -524,6 +528,8 @@
         }
 
         function closeModal() {
+            isQuizMode = false;
+            
             modal.classList.add('opacity-0');
             modalBox.classList.remove('scale-100');
             modalBox.classList.add('scale-95');
@@ -766,9 +772,51 @@
         terminalInput.addEventListener('keydown', (e) => {
             
             if (e.key === 'Enter') {
-                executeCommand(terminalInput.value);
-            } 
-            else if (e.key === 'ArrowUp') {
+                const val = terminalInput.value.trim();
+                
+                // 1. 퀴즈가 진행 중인 경우
+                if (typeof isQuizMode !== 'undefined' && isQuizMode) {
+                    e.preventDefault(); // 기본 Enter 동작 방지
+
+                    // 1. 퀴즈가 이미 끝난 상태 (결과 화면)인지 확인
+                    const isQuizFinished = currentQuestionIndex >= currentQuizData.questions.length;
+
+                    if (isQuizFinished) {
+                        // 결과 화면에서 Enter를 누르면 모달 종료
+                        closeModal();
+                        terminalInput.value = '';
+                        return;
+                    }
+
+                    const feedbackBox = document.getElementById('quiz-feedback-box');
+                    
+                    // A. 정답/오답 피드백이 떠 있는 상태 (다음 문제로 넘어가기)
+                    if (feedbackBox && !feedbackBox.classList.contains('hidden')) {
+                        e.preventDefault();
+                        nextQuizQuestion();
+                        terminalInput.value = '';
+                        return;
+                    }
+                    
+                    // B. 답을 입력해야 하는 상태 (1~4 입력)
+                    if (val >= '1' && val <= '4') {
+                        e.preventDefault();
+                        handleQuizAnswer(parseInt(val) - 1);
+                        terminalInput.value = '';
+                        return;
+                    } else {
+                        printToTerminal("<span class='text-red-400'>오류: 1~4 사이의 숫자를 입력하세요.</span>");
+                        terminalInput.value = '';
+                        return;
+                    }
+                }
+
+                // 2. 일반 모드일 때
+                executeCommand(val);
+                terminalInput.value = '';
+                return;
+            }
+            if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 if (historyIndex > 0) {
                     historyIndex--;
