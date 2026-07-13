@@ -182,26 +182,35 @@
         </div>
     </main>
 
-    <!-- 상세 설명 모달 (문서 뷰어) -->
+    <!-- 상세 설명 모달 (문서 뷰어 & 퀴즈 뷰어 통합) -->
     <div id="modal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop bg-black/70 opacity-0 transition-opacity duration-300">
         <div class="bg-white dark:bg-tetris-dark w-11/12 max-w-2xl rounded-xl shadow-[0_0_30px_rgba(0,255,0,0.3)] border-2 border-tetris-green overflow-hidden transform scale-95 transition-transform duration-300" id="modal-content-box">
+            
             <!-- 모달 헤더 -->
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-100 dark:bg-gray-800" id="modal-header">
                 <div class="flex items-center">
-                    <svg class="w-6 h-6 mr-2 text-tetris-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                    <h2 id="modal-title" class="text-xl font-bold retro-text text-gray-800 dark:text-white">파일명.txt</h2>
+                    <div id="modal-header-icon"></div> <!-- JS에서 SVG 주입 -->
+                    <h2 id="modal-title" class="text-xl font-bold retro-text text-gray-800 dark:text-white">파일명</h2>
                 </div>
                 <button id="close-modal" class="text-gray-500 hover:text-red-500 transition focus:outline-none">
                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
+            
             <!-- 모달 바디 -->
             <div class="p-6 overflow-y-auto max-h-[60vh]">
                 <h3 id="modal-subtitle" class="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-100">서브타이틀</h3>
+                
+                <!-- 문서 뷰어용 영역 (평소에 보임) -->
                 <div id="modal-image-container" class="w-full h-64 bg-gray-200 dark:bg-gray-800 rounded-lg mb-6 flex items-center justify-center text-gray-400 overflow-hidden">
                     <!-- 이미지/움짤 자리 -->
                 </div>
                 <p id="modal-desc" class="text-gray-700 dark:text-gray-300 leading-relaxed text-lg whitespace-pre-line font-mono"></p>
+
+                <!-- 퀴즈 시스템 영역 (퀴즈 모드일 때만 보임) -->
+                <div id="modal-quiz-container" class="hidden flex-col">
+                    <!-- JS에서 퀴즈 문제 및 선택지가 렌더링 됩니다 -->
+                </div>
             </div>
         </div>
     </div>
@@ -210,8 +219,8 @@
     <div id="terminal-wrapper" class="fixed bottom-0 left-0 w-full h-56 bg-[#0a0a0a] border-t-4 border-tetris-green z-[60] flex flex-col font-retro shadow-[0_-10px_30px_rgba(0,255,0,0.15)] cursor-text transition-all duration-300">
         <!-- 터미널 헤더 바 -->
         <div class="bg-[#1a1a1a] text-xs text-gray-400 px-4 py-2 border-b border-gray-800 flex justify-between items-center select-none">
-            <span>TETRIS OS - TERMINAL v2.1 (Tab 완성 지원 및 버그 수정)</span>
-            <span class="hidden md:inline">명령어: help, ls, cd, cat, clear, theme, close</span>
+            <span>TETRIS OS - TERMINAL v3.0 (Quiz System Update)</span>
+            <span class="hidden md:inline">명령어: help, ls, cd, cat, open, clear, theme, close</span>
         </div>
         <!-- 터미널 출력 및 입력 컨테이너 -->
         <div id="terminal-container" class="flex-1 p-4 overflow-y-auto text-sm md:text-base text-tetris-green flex flex-col">
@@ -292,17 +301,7 @@
                     detailDesc: "웹 브라우저에서 바로 접속해서 무료로 즐길 수 있는 멀티플레이 중심의 테트리스 플랫폼입니다.\n\n매우 빠르고 부드러운 조작감을 자랑하며, 전 세계 유저들과 티어를 두고 실력을 겨루는 '테트라 리그(Tetra League)'가 가장 큰 특징입니다. 키보드 설정, 블록이 떨어지는 속도, 화면 효과 등 커스터마이징이 매우 자유로워 현재 수많은 고수들이 가장 애용하는 버전이기도 합니다. 속도감 있는 치열한 경쟁을 원하신다면 강력 추천합니다!",
                     imageText: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ32zFu3B6MnZG8JRBGnItsZQqQF2D58Lh-4FNRhp_cJQ&s=10"
                 },
-            ],
-            // "resource": [
-            //     {
-            //         filename: "web.txt",
-            //         title: "웹 테트리스 사이트 추천",
-            //         colorClass: "text-tetris-green",
-            //         shortDesc: "브라우저에서 바로 즐기는 무료 사이트",
-            //         detailDesc: "다운로드 없이 바로 웹에서 즐길 수 있는 무료 테트리스 사이트 두 곳을 추천합니다.\n\n1. TETR.IO (테트리오): 화려한 이펙트와 전 세계 랭킹 시스템이 잘 갖춰진 현재 가장 인기 있는 대전 플랫폼입니다.\n2. Jstris (제이스트리스): 극도로 가볍고 빠르며, 속도(스프린트) 기록을 단축하려는 유저들이 많이 찾는 심플한 플랫폼입니다.",
-            //         imageText: ""
-            //     }
-            // ]
+            ]
         };
 
         const rootFiles = [
@@ -311,13 +310,52 @@
                 title: "TETRIS OS 소개",
                 colorClass: "text-gray-400",
                 shortDesc: "사이트 설명 및 개요",
-                detailDesc: "TETRIS OS 아카이브에 오신 것을 환영합니다!\n\n이 프로젝트는 테트리스 정보 큐레이션 서비스입니다.\n\n[주요 기능]\n- GUI와 터미널(CLI) 완벽 연동\n- Tab 키를 이용한 명령어 자동완성\n- 디렉토리 기반 탐색 시스템\n\n명령어 'help'를 입력하여 더 많은 정보를 확인하세요.",
+                detailDesc: "TETRIS OS 아카이브에 오신 것을 환영합니다!\n\n이 프로젝트는 테트리스 정보 큐레이션 서비스입니다.\n\n[주요 기능]\n- GUI와 터미널(CLI) 완벽 연동\n- Tab 키를 이용한 명령어 자동완성\n- 디렉토리 기반 탐색 시스템\n- 퀴즈 시스템 내장 (quiz.exe 실행)\n\n명령어 'help'를 입력하여 더 많은 정보를 확인하세요.",
                 imageText: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQlSRj4jhkVc_L5eUNxSNvL4aLiExaa2vXrilpxETzYoA&s=10"
+            },
+            // 새롭게 추가된 퀴즈 실행 파일
+            {
+                filename: "quiz.exe",
+                title: "TETRIS 모의고사",
+                colorClass: "text-tetris-cyan",
+                shortDesc: "당신의 테트리스 지식을 테스트해보세요!",
+                isQuiz: true, // 이 속성을 통해 모달이 퀴즈 시스템을 렌더링함
+                questions: [
+                    { 
+                        q: "테트리스 화면 위에서 떨어지는 블록들의 공식 명칭은?", 
+                        options: ["블록", "미노", "퍼즐", "테트로"], 
+                        answer: 1, 
+                        explanation: "정답은 '미노(Mino)'입니다. 4개의 정사각형이 모여 만들어진 도형인 '테트로미노'에서 유래했습니다." 
+                    },
+                    { 
+                        q: "오직 '이 미노'만이 한 번에 4줄을 지울 수 있습니다. 무슨 모양일까요?", 
+                        options: ["보라색 T 미노", "노란색 O 미노", "하늘색 I 미노", "빨간색 Z 미노"], 
+                        answer: 2, 
+                        explanation: "하늘색의 긴 작대기 모양인 'I 미노'만이 4칸을 꽉 채워 한 번에 4줄을 삭제(테트리스)할 수 있습니다." 
+                    },
+                    { 
+                        q: "T모양 미노를 회전시켜 불가능해 보이는 좁은 틈에 끼워 넣는 고급 기술의 이름은?", 
+                        options: ["T-스핀", "T-점프", "T-슬라이드", "T-드롭"], 
+                        answer: 0, 
+                        explanation: "정답은 'T-스핀(T-Spin)'입니다. 대전 테트리스에서 살아남기 위한 필수 생존 기술이자 강력한 공격기입니다." 
+                    },
+                    { 
+                        q: "게임 시작 직후, 텅 빈 맵에 정해진 공식대로 블록을 쌓는 '초반 빌드'를 뜻하는 용어는?", 
+                        options: ["엔딩", "클로저", "빌드업", "오프너"], 
+                        answer: 3, 
+                        explanation: "정답은 '오프너(Opener)'입니다. 퍼펙트 클리어나 T-스핀 트리플 등을 초반에 확정적으로 만들어 상대를 압도합니다." 
+                    }
+                ]
             }
         ];
 
         // 상태 변수
         let currentPath = '/';
+        
+        // 퀴즈 시스템용 상태 변수
+        let currentQuizData = null;
+        let currentQuestionIndex = 0;
+        let currentScore = 0;
 
         // --- 2. GUI 렌더링 (디렉토리 및 파일 표시) ---
         const gallery = document.getElementById('gallery');
@@ -347,22 +385,36 @@
                     gallery.appendChild(card);
                 });
 
-                // 루트 디렉토리: 파일들 렌더링 (README.md 등)
+                // 루트 디렉토리: 파일들 렌더링 (README.md, quiz.exe 등)
                 rootFiles.forEach(data => {
                     const card = document.createElement('div');
-                    card.className = `card-enter flex flex-col justify-between h-48 bg-white dark:bg-gray-900 rounded-xl shadow-lg border-l-4 border-gray-400 dark:border-gray-600 cursor-pointer hover:-translate-y-2 hover:border-gray-400 hover:shadow-[0_10px_20px_rgba(156,163,175,0.2)] transition-all duration-300 group`;
-                    card.onclick = () => executeCommand(`cat ${data.filename}`, true);
+                    card.className = `card-enter flex flex-col justify-between h-48 bg-white dark:bg-gray-900 rounded-xl shadow-lg border-l-4 border-gray-400 dark:border-gray-600 cursor-pointer hover:-translate-y-2 transition-all duration-300 group`;
+                    
+                    // .exe 파일인 경우 카드 호버 시 강조 효과를 다르게 줌
+                    if (data.isQuiz) {
+                        card.classList.add('hover:border-tetris-cyan', 'hover:shadow-[0_10px_20px_rgba(0,255,255,0.2)]');
+                    } else {
+                        card.classList.add('hover:border-gray-400', 'hover:shadow-[0_10px_20px_rgba(156,163,175,0.2)]');
+                    }
+
+                    // 명령어도 .exe면 명확하게 open을 사용
+                    card.onclick = () => executeCommand(data.isQuiz ? `open ${data.filename}` : `cat ${data.filename}`, true);
+
+                    // .exe 실행 파일은 패드 아이콘, 그 외는 문서 아이콘 사용
+                    const iconSvg = data.isQuiz 
+                        ? `<svg class="w-6 h-6 mr-2 ${data.colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`
+                        : `<svg class="w-6 h-6 mr-2 ${data.colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>`;
 
                     card.innerHTML = `
                         <div class="p-6">
                             <div class="flex items-center mb-3">
-                                <svg class="w-6 h-6 mr-2 ${data.colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                <h3 class="text-lg font-bold retro-text group-hover:text-gray-400 transition-colors truncate">${data.filename}</h3>
+                                ${iconSvg}
+                                <h3 class="text-lg font-bold retro-text group-hover:${data.isQuiz ? 'text-tetris-cyan' : 'text-gray-400'} transition-colors truncate">${data.filename}</h3>
                             </div>
                             <p class="text-gray-600 dark:text-gray-400 text-sm font-sans line-clamp-2">${data.shortDesc}</p>
                         </div>
                         <div class="px-6 py-2 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800">
-                            <span class="text-xs font-retro text-gray-400 group-hover:text-gray-500 transition-colors">📄 FILE</span>
+                            <span class="text-xs font-retro text-gray-400 group-hover:${data.isQuiz ? 'text-tetris-cyan' : 'text-gray-500'} transition-colors">${data.isQuiz ? '🎮 EXE' : '📄 FILE'}</span>
                         </div>
                     `;
                     gallery.appendChild(card);
@@ -406,29 +458,62 @@
             setupIntersectionObserver();
         }
 
-        // --- 3. 모달 (팝업 문서 뷰어) ---
+        // --- 3. 모달 (문서 뷰어 및 퀴즈 로직) ---
         const modal = document.getElementById('modal');
         const modalBox = document.getElementById('modal-content-box');
         
         function openModal(data) {
             document.getElementById('modal-title').textContent = data.filename;
             document.getElementById('modal-subtitle').textContent = data.title;
-            document.getElementById('modal-desc').textContent = data.detailDesc;
             
             const header = document.getElementById('modal-header');
             header.className = `px-6 py-4 border-b-4 flex justify-between items-center bg-gray-100 dark:bg-gray-800`;
             header.classList.add(data.colorClass.replace('text-', 'border-'));
 
+            // 헤더 아이콘 세팅 (.exe 파일이면 게임패드, 일반 문서는 문서 아이콘)
+            const headerIcon = document.getElementById('modal-header-icon');
+            headerIcon.innerHTML = data.isQuiz
+                ? `<svg class="w-6 h-6 mr-2 ${data.colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`
+                : `<svg class="w-6 h-6 mr-2 ${data.colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>`;
+
             const imgContainer = document.getElementById('modal-image-container');
-            imgContainer.className = `w-full h-64 rounded-lg mb-6 flex items-center justify-center text-white text-lg font-bold opacity-80 shadow-inner bg-gray-800`;
-            imgContainer.classList.add(data.colorClass.replace('text-', 'bg-'));
-            if (data.imageText && (data.imageText.startsWith('http') || data.imageText.match(/\.(jpeg|jpg|gif|png|webp)$/i))) {
-                imgContainer.innerHTML = `<img src="${data.imageText}" alt="${data.title}" class="w-full h-full object-contain bg-white" onerror="this.onerror=null; this.parentElement.textContent='[이미지를 불러올 수 없습니다]';">`;
+            const descContainer = document.getElementById('modal-desc');
+            const quizContainer = document.getElementById('modal-quiz-container');
+
+            if (data.isQuiz) {
+                // --- 퀴즈 모드 렌더링 ---
+                imgContainer.classList.add('hidden');
+                descContainer.classList.add('hidden');
+                quizContainer.classList.remove('hidden');
+                
+                // 퀴즈 상태 초기화 및 시작
+                currentQuizData = data;
+                currentQuestionIndex = 0;
+                currentScore = 0;
+                renderQuizQuestion();
+
+                printToTerminal(`[SYSTEM] 모의고사 프로그램 '${data.filename}'이 실행되었습니다.`);
+
             } else {
-                imgContainer.classList.add('opacity-80');
-                imgContainer.textContent = data.imageText;
+                // --- 일반 문서 모드 렌더링 ---
+                imgContainer.classList.remove('hidden');
+                descContainer.classList.remove('hidden');
+                quizContainer.classList.add('hidden');
+
+                // 내용 채우기
+                descContainer.textContent = data.detailDesc;
+                imgContainer.className = `w-full h-64 rounded-lg mb-6 flex items-center justify-center text-white text-lg font-bold opacity-80 shadow-inner bg-gray-800 overflow-hidden`;
+                imgContainer.classList.add(data.colorClass.replace('text-', 'bg-'));
+                
+                if (data.imageText && (data.imageText.startsWith('http') || data.imageText.match(/\.(jpeg|jpg|gif|png|webp)$/i))) {
+                    imgContainer.innerHTML = `<img src="${data.imageText}" alt="${data.title}" class="w-full h-full object-contain bg-white" onerror="this.onerror=null; this.parentElement.textContent='[이미지를 불러올 수 없습니다]';">`;
+                } else {
+                    imgContainer.classList.add('opacity-80');
+                    imgContainer.textContent = data.imageText;
+                }
             }
 
+            // 모달 오픈 애니메이션
             modal.classList.remove('hidden');
             modal.classList.add('flex');
             setTimeout(() => {
@@ -445,11 +530,110 @@
             setTimeout(() => {
                 modal.classList.add('hidden');
                 modal.classList.remove('flex');
+                
+                // 퀴즈 데이터 초기화
+                if (currentQuizData) {
+                    printToTerminal(`[SYSTEM] '${currentQuizData.filename}' 프로그램을 종료합니다.`);
+                    currentQuizData = null;
+                }
             }, 300);
         }
 
         document.getElementById('close-modal').addEventListener('click', closeModal);
         modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
+
+        // --- 3-1. 퀴즈 기능 구현 (Quiz System) ---
+        function renderQuizQuestion() {
+            const container = document.getElementById('modal-quiz-container');
+            
+            // 모든 문제를 풀었을 경우 결과 화면 표시
+            if (currentQuestionIndex >= currentQuizData.questions.length) {
+                const total = currentQuizData.questions.length;
+                const isPerfect = currentScore === total;
+                
+                container.innerHTML = `
+                    <div class="text-center py-8">
+                        <h4 class="text-3xl font-bold text-tetris-cyan mb-4 retro-text animate-blink">QUIZ COMPLETE_</h4>
+                        <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-6 mb-6">
+                            <p class="text-2xl mb-2 font-bold text-gray-800 dark:text-gray-200">최종 점수: <span class="text-tetris-purple">${currentScore}</span> / ${total}</p>
+                            ${isPerfect 
+                                ? '<p class="text-tetris-yellow font-bold mt-4">★ PERFECT CLEAR! ★<br>당신은 진정한 테트리스 마스터입니다!</p>' 
+                                : '<p class="text-gray-500 mt-4">다시 한 번 도전해서 완벽에 도전해보세요!</p>'}
+                        </div>
+                        <button onclick="closeModal()" class="px-8 py-3 bg-tetris-purple text-white font-bold rounded hover:bg-opacity-80 transition retro-text shadow-lg">시스템 종료 (EXIT)</button>
+                    </div>
+                `;
+                return;
+            }
+
+            // 문제 렌더링
+            const qData = currentQuizData.questions[currentQuestionIndex];
+            
+            let optionsHtml = '';
+            qData.options.forEach((opt, idx) => {
+                optionsHtml += `
+                    <button onclick="handleQuizAnswer(${idx})" class="quiz-option-btn w-full text-left p-4 bg-gray-100 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 rounded-lg hover:border-tetris-cyan dark:hover:border-tetris-cyan hover:shadow-[0_0_15px_rgba(0,255,255,0.3)] transition-all text-gray-800 dark:text-gray-200 font-bold mb-3 cursor-pointer">
+                        <span class="mr-2 text-tetris-cyan">${idx + 1}.</span> ${opt}
+                    </button>`;
+            });
+
+            container.innerHTML = `
+                <div class="mb-6">
+                    <span class="inline-block px-3 py-1 bg-tetris-purple text-white font-bold text-sm rounded-full mb-4 shadow font-retro">Q${currentQuestionIndex + 1} / ${currentQuizData.questions.length}</span>
+                    <h4 class="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100 leading-relaxed">${qData.q}</h4>
+                </div>
+                <div id="quiz-options-wrapper" class="flex flex-col">
+                    ${optionsHtml}
+                </div>
+                <div id="quiz-feedback-box" class="hidden mt-4 p-4 rounded-lg"></div>
+                <button id="quiz-next-btn" onclick="nextQuizQuestion()" class="hidden w-full mt-6 px-4 py-4 bg-tetris-cyan text-black font-bold rounded-lg shadow-[0_0_15px_rgba(0,255,255,0.4)] hover:bg-opacity-80 transition retro-text">다음 문제로 넘어가기 ➔</button>
+            `;
+        }
+
+        function handleQuizAnswer(selectedIndex) {
+            const qData = currentQuizData.questions[currentQuestionIndex];
+            const feedbackBox = document.getElementById('quiz-feedback-box');
+            const optionsWrapper = document.getElementById('quiz-options-wrapper');
+            const nextBtn = document.getElementById('quiz-next-btn');
+
+            // 버튼 비활성화 및 정답/오답 하이라이트
+            const buttons = optionsWrapper.querySelectorAll('.quiz-option-btn');
+            buttons.forEach((btn, idx) => {
+                btn.disabled = true;
+                btn.classList.remove('hover:border-tetris-cyan', 'hover:shadow-[0_0_15px_rgba(0,255,255,0.3)]', 'cursor-pointer');
+                
+                if (idx === qData.answer) {
+                    // 정답인 버튼은 초록색으로 강조
+                    btn.classList.add('border-tetris-green', 'bg-green-50', 'dark:bg-green-900/30');
+                } else if (idx === selectedIndex && selectedIndex !== qData.answer) {
+                    // 내가 고른 오답은 빨간색으로 강조
+                    btn.classList.add('border-tetris-red', 'bg-red-50', 'dark:bg-red-900/30');
+                } else {
+                    // 나머지는 흐리게
+                    btn.classList.add('opacity-50');
+                }
+            });
+
+            feedbackBox.classList.remove('hidden');
+            nextBtn.classList.remove('hidden');
+
+            // 결과 판정
+            if (selectedIndex === qData.answer) {
+                currentScore++;
+                feedbackBox.className = 'mt-4 p-5 rounded-lg bg-green-100 dark:bg-green-900/40 border-l-4 border-tetris-green text-tetris-green dark:text-green-400';
+                feedbackBox.innerHTML = `<p class="font-bold text-lg mb-2">🎉 정답입니다!</p><p class="text-sm md:text-base text-gray-700 dark:text-gray-300">${qData.explanation}</p>`;
+                printToTerminal(`[QUIZ] Q${currentQuestionIndex + 1} 정답! (현재 점수: ${currentScore})`);
+            } else {
+                feedbackBox.className = 'mt-4 p-5 rounded-lg bg-red-100 dark:bg-red-900/40 border-l-4 border-tetris-red text-red-600 dark:text-red-400';
+                feedbackBox.innerHTML = `<p class="font-bold text-lg mb-2">🥲 오답입니다.</p><p class="text-sm md:text-base text-gray-700 dark:text-gray-300">정답은 ${qData.answer + 1}번입니다. ${qData.explanation}</p>`;
+                printToTerminal(`[QUIZ] Q${currentQuestionIndex + 1} 오답.`);
+            }
+        }
+
+        function nextQuizQuestion() {
+            currentQuestionIndex++;
+            renderQuizQuestion();
+        }
 
         // --- 4. 터미널(CLI) 및 하이브리드 제어 로직 ---
         const terminalInput = document.getElementById('terminal-input');
@@ -490,8 +674,6 @@
             
             const args = fullCommand.trim().split(' ').filter(Boolean);
             const command = args[0].toLowerCase();
-            
-            // 파일명(target)의 경우 대소문자 구분을 없애기 위해 toLowerCase()를 호출하지만, 원본 텍스트도 보존합니다.
             const target = args[1] ? args[1].toLowerCase() : '';
 
             switch (command) {
@@ -500,8 +682,9 @@
                     printToTerminal("<b>[TETRIS OS 명령어 목록]</b>");
                     printToTerminal("- <span class='text-tetris-yellow'>ls</span> : 현재 경로의 폴더 및 파일 목록 보기");
                     printToTerminal("- <span class='text-tetris-yellow'>cd [폴더명]</span> : 폴더 이동 (예: cd beginner, cd ..)");
-                    printToTerminal("- <span class='text-tetris-yellow'>cat [파일명]</span> 또는 <span class='text-tetris-yellow'>open [파일명]</span> : 문서 열기 (예: cat basic.txt)");
-                    printToTerminal("- <span class='text-tetris-yellow'>close</span> 또는 <span class='text-tetris-yellow'>exit</span> : 열려있는 문서 창 닫기");
+                    printToTerminal("- <span class='text-tetris-yellow'>cat [파일명]</span> : 일반 문서 열기 (예: cat basic.txt)");
+                    printToTerminal("- <span class='text-tetris-yellow'>open [파일명]</span> : 프로그램/문서 열기 (예: open quiz.exe)");
+                    printToTerminal("- <span class='text-tetris-yellow'>close</span> 또는 <span class='text-tetris-yellow'>exit</span> : 열려있는 문서/프로그램 종료");
                     printToTerminal("- <span class='text-tetris-yellow'>clear</span> : 터미널 화면 지우기");
                     printToTerminal("- <span class='text-tetris-yellow'>theme [light/dark]</span> : 테마 변경");
                     break;
@@ -532,14 +715,14 @@
                     break;
                 case 'cat':
                 case 'open':
+                case 'run':
                     if (!target) {
-                        printToTerminal("<span class='text-red-400'>오류: 읽을 파일명을 입력해주세요. (예: cat basic.txt)</span>");
+                        printToTerminal("<span class='text-red-400'>오류: 실행하거나 읽을 파일명을 입력해주세요. (예: open quiz.exe)</span>");
                         break;
                     }
                     
                     let fileData;
                     if (currentPath === '/') {
-                        // 입력값과 실제 파일명을 모두 소문자로 변환하여 비교 (대소문자 구별 버그 픽스)
                         fileData = rootFiles.find(f => f.filename.toLowerCase() === target);
                     } else {
                         fileData = fileSystem[currentPath].find(f => f.filename.toLowerCase() === target);
@@ -547,7 +730,6 @@
 
                     if (fileData) {
                         openModal(fileData);
-                        printToTerminal(`문서 뷰어에서 '<span class="text-tetris-cyan">${fileData.filename}</span>' 파일을 열었습니다.`);
                     } else {
                         printToTerminal(`<span class="text-red-400">오류: '${args[1]}' 파일을 찾을 수 없습니다.</span>`);
                     }
@@ -558,7 +740,6 @@
                 case 'close':
                 case 'exit':
                     closeModal();
-                    printToTerminal("창을 닫았습니다.");
                     break;
                 case 'theme':
                     const htmlElement = document.documentElement;
@@ -610,10 +791,10 @@
                 if (!val) return;
 
                 const args = val.split(' ');
-                const lastArg = args[args.length - 1].toLowerCase(); // 검색용 소문자
+                const lastArg = args[args.length - 1].toLowerCase();
 
                 if (args.length === 1) {
-                    const cmds = ['help', 'ls', 'cd', 'cat', 'open', 'clear', 'theme', 'close', 'exit'];
+                    const cmds = ['help', 'ls', 'cd', 'cat', 'open', 'run', 'clear', 'theme', 'close', 'exit'];
                     const matches = cmds.filter(c => c.startsWith(lastArg));
                     
                     if (matches.length === 1) {
@@ -631,7 +812,7 @@
                         if (currentPath === '/') options = Object.keys(fileSystem);
                         else options = ['..'];
                     } 
-                    else if (cmd === 'cat' || cmd === 'open') {
+                    else if (cmd === 'cat' || cmd === 'open' || cmd === 'run') {
                         if (currentPath === '/') {
                             options = rootFiles.map(f => f.filename);
                         } else {
@@ -639,10 +820,8 @@
                         }
                     }
 
-                    // 대소문자 무시하고 매칭하되 원본 배열의 값을 반환
                     const matches = options.filter(o => o.toLowerCase().startsWith(lastArg));
                     if (matches.length === 1) {
-                        // 정확한 대소문자(matches[0])를 사용하여 터미널 자동완성
                         terminalInput.value = `${cmd} ${matches[0]} `;
                     } else if (matches.length > 1) {
                         printToTerminal(val, true);
