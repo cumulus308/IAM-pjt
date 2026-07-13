@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TETRIS OS - 하이브리드 아카이브</title>
+    
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        tetris: {
+                            cyan: '#00FFFF',   // I-Block
+                            yellow: '#FFFF00', // O-Block
+                            purple: '#9C27B0', // T-Block
+                            green: '#4CAF50',  // S-Block
+                            red: '#F44336',    // Z-Block
+                            blue: '#2196F3',   // J-Block
+                            orange: '#FF9800', // L-Block
+                            dark: '#121212',
+                            darker: '#0a0a0a',
+                            light: '#f5f5f5',
+                        }
+                    },
+                    fontFamily: {
+                        retro: ['"DungGeunMo"', 'cursive'], // 레트로 픽셀 폰트
+                        sans: ['"Noto Sans KR"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- 웹 폰트 로드 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* 눈누 - 둥근모꼴 레트로 폰트 */
+        @font-face {
+            font-family: 'DungGeunMo';
+            src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        h1, h2, h3, .retro-text {
+            font-family: 'DungGeunMo', sans-serif;
+        }
+
+        /* 스크롤 진행률 바 */
+        #scroll-progress-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: transparent;
+            z-index: 100;
+        }
+        #scroll-progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: #00FFFF;
+            box-shadow: 0 0 10px #00FFFF;
+            transition: width 0.1s;
+        }
+
+        /* 카드 스크롤 애니메이션 */
+        .card-enter {
+            opacity: 0;
+            transform: translateY(-20px) scale(0.95);
+            transition: opacity 0.4s ease-out, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .card-enter.visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        /* 깜빡이는 애니메이션 */
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        .animate-blink {
+            animation: blink 1.5s infinite;
+        }
+
+        /* 커스텀 스크롤바 */
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: #1a1a1a; }
+        ::-webkit-scrollbar-thumb { background: #4a4a4a; border-radius: 5px; }
+        .light ::-webkit-scrollbar-track { background: #e0e0e0; }
+        .light ::-webkit-scrollbar-thumb { background: #9e9e9e; }
+        
+        /* 모달 블러 */
+        .modal-backdrop { backdrop-filter: blur(5px); }
+
+        /* 미노 떠다니는 애니메이션 */
+        @keyframes float-mino {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-30px) rotate(120deg); }
+            100% { transform: translateY(0px) rotate(360deg); }
+        }
+        .floating-mino {
+            position: absolute;
+            opacity: 0.3;
+            animation: float-mino 15s linear infinite;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .dark .floating-mino { opacity: 0.6; }
+
+        /* 터미널 포커스 아웃라인 제거 */
+        #terminal-input:focus { outline: none; }
+        
+        /* 터미널 내부 스크롤바 작게 */
+        #terminal-container::-webkit-scrollbar { width: 6px; }
+    </style>
+</head>
+<body class="bg-tetris-light text-gray-800 dark:bg-tetris-darker dark:text-gray-200">
+
+    <!-- 상단 스크롤 진행률 바 -->
+    <div id="scroll-progress-container">
+        <div id="scroll-progress-bar"></div>
+    </div>
+
+    <!-- 네비게이션 헤더 -->
+    <nav class="sticky top-0 z-40 bg-white/80 dark:bg-tetris-dark/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="text-2xl font-bold retro-text text-tetris-purple drop-shadow-md cursor-pointer" onclick="executeCommand('cd /', true)">
+                TETRIS<span class="text-tetris-cyan">_</span>OS
+            </div>
+            <!-- 다크모드 / 라이트모드 전환 버튼 -->
+            <button id="theme-toggle" class="p-2 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 transition flex items-center justify-center">
+                <svg id="theme-icon-light" class="w-6 h-6 hidden dark:block text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                <svg id="theme-icon-dark" class="w-6 h-6 block dark:hidden text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+            </button>
+        </div>
+    </nav>
+
+    <!-- 메인 히어로 섹션 -->
+    <header class="relative py-16 px-4 text-center overflow-hidden z-0">
+        <!-- 배경에 떠다니는 7개의 테트로미노 -->
+        <svg class="floating-mino" style="top: 10%; left: 10%; width: 80px; animation-duration: 18s; animation-delay: 0s;" viewBox="0 0 4 4"><path d="M0,1 h4 v1 h-4 Z" fill="#00FFFF" stroke="rgba(0,0,0,0.2)" stroke-width="0.1"/></svg>
+        <svg class="floating-mino" style="top: 60%; left: 15%; width: 60px; animation-duration: 22s; animation-delay: -5s;" viewBox="0 0 4 4"><path d="M1,1 h2 v2 h-2 Z" fill="#FFFF00" stroke="rgba(0,0,0,0.2)" stroke-width="0.1"/></svg>
+        <svg class="floating-mino" style="top: 25%; left: 80%; width: 70px; animation-duration: 25s; animation-delay: -10s;" viewBox="0 0 4 4"><path d="M1,0 h1 v1 h1 v1 h-3 v-1 h1 Z" fill="#9C27B0" stroke="rgba(0,0,0,0.2)" stroke-width="0.1"/></svg>
+        <svg class="floating-mino" style="top: 70%; left: 75%; width: 65px; animation-duration: 20s; animation-delay: -2s;" viewBox="0 0 4 4"><path d="M1,0 h2 v1 h-1 v1 h-2 v-1 h1 Z" fill="#4CAF50" stroke="rgba(0,0,0,0.2)" stroke-width="0.1"/></svg>
+        <svg class="floating-mino" style="top: 80%; left: 35%; width: 75px; animation-duration: 24s; animation-delay: -8s;" viewBox="0 0 4 4"><path d="M0,0 h2 v1 h1 v1 h-2 v-1 h-1 Z" fill="#F44336" stroke="rgba(0,0,0,0.2)" stroke-width="0.1"/></svg>
+        <svg class="floating-mino" style="top: 15%; left: 40%; width: 55px; animation-duration: 19s; animation-delay: -4s;" viewBox="0 0 4 4"><path d="M0,0 h1 v1 h2 v1 h-3 Z" fill="#2196F3" stroke="rgba(0,0,0,0.2)" stroke-width="0.1"/></svg>
+        <svg class="floating-mino" style="top: 55%; left: 85%; width: 65px; animation-duration: 21s; animation-delay: -7s;" viewBox="0 0 4 4"><path d="M2,0 h1 v2 h-3 v-1 h2 Z" fill="#FF9800" stroke="rgba(0,0,0,0.2)" stroke-width="0.1"/></svg>
+
+        <div class="relative z-10">
+            <h1 class="text-4xl md:text-5xl font-bold mb-4 retro-text text-white" style="text-shadow: 3px 3px 0px #000, -1px -1px 0px #000, 1px -1px 0px #000, -1px 1px 0px #000, 0px 4px 10px rgba(0,0,0,0.5);">
+                I AM : TETRIS OS
+            </h1>
+            <p class="text-lg md:text-xl text-gray-600 dark:text-gray-400 mb-4 max-w-2xl mx-auto drop-shadow-sm">
+                테트리스의 세계를 소개하는 큐레이션 공간입니다.<br>
+                마우스(GUI)와 터미널 명령어(CLI)를 활용해 아카이브를 자유롭게 탐색해 보세요!
+            </p>
+        </div>
+    </header>
+
+    <!-- GUI 렌더링 영역 -->
+    <main class="max-w-6xl mx-auto px-4 pb-64">
+        
+        <!-- 현재 경로(Breadcrumb) 표시 -->
+        <div class="mb-6 font-retro text-xl md:text-2xl text-tetris-green bg-gray-200 dark:bg-gray-800 py-3 px-6 rounded-lg inline-block border-2 border-tetris-green shadow-sm">
+            > <span id="gui-path-display">/</span>
+        </div>
+
+        <!-- 갤러리 (폴더 및 파일 렌더링) -->
+        <div id="gallery" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <!-- 자바스크립트를 통해 동적 렌더링 -->
+        </div>
+    </main>
+
+    <!-- 상세 설명 모달 (문서 뷰어) -->
+    <div id="modal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop bg-black/70 opacity-0 transition-opacity duration-300">
+        <div class="bg-white dark:bg-tetris-dark w-11/12 max-w-2xl rounded-xl shadow-[0_0_30px_rgba(0,255,0,0.3)] border-2 border-tetris-green overflow-hidden transform scale-95 transition-transform duration-300" id="modal-content-box">
+            <!-- 모달 헤더 -->
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-100 dark:bg-gray-800" id="modal-header">
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 mr-2 text-tetris-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    <h2 id="modal-title" class="text-xl font-bold retro-text text-gray-800 dark:text-white">파일명.txt</h2>
+                </div>
+                <button id="close-modal" class="text-gray-500 hover:text-red-500 transition focus:outline-none">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <!-- 모달 바디 -->
+            <div class="p-6 overflow-y-auto max-h-[60vh]">
+                <h3 id="modal-subtitle" class="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-100">서브타이틀</h3>
+                <div id="modal-image-container" class="w-full h-64 bg-gray-200 dark:bg-gray-800 rounded-lg mb-6 flex items-center justify-center text-gray-400 overflow-hidden">
+                    <!-- 이미지/움짤 자리 -->
+                </div>
+                <p id="modal-desc" class="text-gray-700 dark:text-gray-300 leading-relaxed text-lg whitespace-pre-line font-mono"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 하이브리드 UI: 하단 터미널 (CLI) -->
+    <div id="terminal-wrapper" class="fixed bottom-0 left-0 w-full h-56 bg-[#0a0a0a] border-t-4 border-tetris-green z-[60] flex flex-col font-retro shadow-[0_-10px_30px_rgba(0,255,0,0.15)] cursor-text transition-all duration-300">
+        <!-- 터미널 헤더 바 -->
+        <div class="bg-[#1a1a1a] text-xs text-gray-400 px-4 py-2 border-b border-gray-800 flex justify-between items-center select-none">
+            <span>TETRIS OS - TERMINAL v2.1 (Tab 완성 지원 및 버그 수정)</span>
+            <span class="hidden md:inline">명령어: help, ls, cd, cat, clear, theme, close</span>
+        </div>
+        <!-- 터미널 출력 및 입력 컨테이너 -->
+        <div id="terminal-container" class="flex-1 p-4 overflow-y-auto text-sm md:text-base text-tetris-green flex flex-col">
+            <!-- 출력 영역 -->
+            <div id="terminal-output" class="whitespace-pre-wrap flex-1 flex flex-col justify-end">
+                <div class="mb-1 text-gray-400">시스템 파일 시스템 마운트 완료. 루트 경로(/)에 진입했습니다.</div>
+                <div class="mb-2 text-gray-400">명령어 <span class="text-white">'help'</span>를 입력하여 도움말을 확인하세요. 폴더명 입력시 <span class="text-white">'Tab'</span> 키로 자동완성이 가능합니다.</div>
+            </div>
+            <!-- 입력 영역 -->
+            <div class="flex items-center mt-1">
+                <span id="cli-path-prompt" class="text-tetris-cyan mr-2">/ ></span>
+                <input type="text" id="terminal-input" class="flex-1 bg-transparent border-none text-tetris-green focus:outline-none retro-text" autocomplete="off" spellcheck="false" placeholder="_" autofocus>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. 파일 시스템(디렉토리) 구조 데이터 ---
+        const fileSystem = {
+            "beginner": [
+                {
+                    filename: "basic.txt",
+                    title: "테트리스 입문자 가이드",
+                    colorClass: "text-tetris-cyan",
+                    shortDesc: "기본 룰과 테트로미노 종류",
+                    detailDesc: "테트리스는 위에서 떨어지는 7가지 모양의 테트로미노를 조작하여 빈칸 없이 가로줄을 채워 없애는 게임입니다.\n\n가장 기본이 되는 것은 '평평하게 쌓기'입니다. 구멍(홀)을 만들지 않고 차곡차곡 쌓아 올리면서, 하늘색 I블록(긴 작대기)을 꽂아 한 번에 4줄을 지우는 '테트리스(Tetris)'를 노리는 것이 초보자의 첫 번째 목표입니다.",
+                    imageText: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSNOQ4aqp3Hh4V7eBSCqSM4cLeQVeoQ8nM034GyAwMrJw&s=10"
+                },
+                {
+                    filename: "term.txt",
+                    title: "테트리스 필수 용어 사전",
+                    colorClass: "text-tetris-yellow",
+                    shortDesc: "테트리스를 시작하기 전 꼭 알아야 할 핵심 용어 4가지",
+                    detailDesc: "테트리스 세계에 오신 것을 환영합니다! 초보자라면 꼭 알아야 할 4가지 핵심 용어입니다.\n\n1. 미노 (Mino)\n테트리스 화면 위에서 떨어지는 블록들을 부르는 말입니다. 4개의 정사각형이 모여 만들어지며, 모양에 따라 I, J, L, O, S, T, Z 총 7가지 종류가 있습니다.\n\n2. 테트리스 (Tetris)\n게임의 이름이기도 하지만, 한 번에 4줄을 동시에 지우는 기술을 뜻합니다! 오직 하늘색 긴 작대기 모양의 'I 미노'를 통해서만 달성할 수 있는 가장 시원하고 짜릿한 기술이죠.\n\n3. 스핀 (Spin)\n블록이 바닥이나 다른 블록들에 닿기 직전에 회전(Spin)시켜서 좁은 틈 사이로 절묘하게 끼워 넣는 기술입니다. 특히 'T 미노'를 활용한 'T-스핀'이 가장 유명하며, 높은 공격력을 자랑합니다.\n\n4. 오프너 (Opener)\n게임이 시작되자마자 텅 빈 맵에 정해진 공식대로 블록을 쌓아 올리는 초반 빌드를 뜻합니다. 체스나 바둑의 '정석'과 비슷하며, 초반 기선 제압을 위해 많이 사용됩니다.",
+                    imageText: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSHOVDCr4X_S6VxKtGTlBzB2hnVmKyJEuqg0XGQn14Ffg&s=10"
+                },
+            ],
+            "advanced": [
+                {
+                    filename: "t-spin.txt",
+                    title: "T-스핀 (T-Spin) 도감",
+                    colorClass: "text-tetris-purple",
+                    shortDesc: "보라색 T블록을 활용한 고급 회전 기술.",
+                    detailDesc: "현대 테트리스에서 살아남기 위한 필수 기술인 'T-스핀(T-Spin)'입니다.\n\nT모양 블록을 회전 시스템(SRS)을 이용해 불가능해 보이는 틈새로 끼워 넣는 기술입니다. 일반적인 줄 삭제보다 공격력이 훨씬 강력하기 때문에, 대전 테트리스에서는 T-스핀 형태를 의도적으로 만드는 '빌드업'이 핵심 전략입니다.",
+                    imageText: "https://media.tenor.com/Jl9dpp8GPt8AAAAM/tetris.gif"
+                },
+                {
+                    filename: "pc.txt",
+                    title: "퍼펙트 클리어 (PC)",
+                    colorClass: "text-tetris-yellow",
+                    shortDesc: "모든 블록을 완벽하게 지워버리는 궁극기.",
+                    detailDesc: "화면(매트릭스)에 남아있는 블록을 하나도 남김없이 모두 없애는 기술입니다.\n\n첫 10개의 블록을 정해진 공식대로 배치하면 높은 확률로 퍼펙트 클리어를 달성할 수 있습니다. 성공 시 상대방에게 어마어마한 쓰레기 블록 공격을 보낼 수 있어 시작 오프닝 기술로 많이 사용됩니다.",
+                    imageText: ""
+                }
+            ],
+            "review": [
+                {
+                    filename: "t99.txt",
+                    title: "테트리스 99 (Tetris 99)",
+                    colorClass: "text-tetris-red",
+                    shortDesc: "99명이 동시에 대결하는 배틀로얄!",
+                    detailDesc: "테트리스와 배틀로얄 장르가 만났습니다. 99명의 플레이어가 동시에 게임을 시작하여 최후의 1인이 남을 때까지 서로 공격을 주고받습니다.\n\n내가 지운 줄이 다른 사람에게 공격(쓰레기 블록)으로 날아가며, K.O 뱃지 시스템을 통해 공격력을 강화할 수 있는 전략성이 뛰어난 게임입니다.",
+                    imageText: ""
+                },
+                {
+                    filename: "effect.txt",
+                    title: "테트리스 이펙트",
+                    colorClass: "text-tetris-blue",
+                    shortDesc: "빛과 소리의 완벽한 조화. 힐링 끝판왕.",
+                    detailDesc: "플레이어의 조작 하나하나에 맞춰 음악과 배경, 특수 효과가 반응하는 공감각적 테트리스입니다.\n\nVR(가상현실)을 지원하여 엄청난 몰입감을 선사하며, 치열한 경쟁보다는 자기 자신과의 기록 싸움, 그리고 시청각적인 '힐링'을 원하는 분들에게 강력히 추천하는 버전입니다.",
+                    imageText: ""
+                }
+            ],
+            "resource": [
+                {
+                    filename: "web.txt",
+                    title: "웹 테트리스 사이트 추천",
+                    colorClass: "text-tetris-green",
+                    shortDesc: "브라우저에서 바로 즐기는 무료 사이트",
+                    detailDesc: "다운로드 없이 바로 웹에서 즐길 수 있는 무료 테트리스 사이트 두 곳을 추천합니다.\n\n1. TETR.IO (테트리오): 화려한 이펙트와 전 세계 랭킹 시스템이 잘 갖춰진 현재 가장 인기 있는 대전 플랫폼입니다.\n2. Jstris (제이스트리스): 극도로 가볍고 빠르며, 속도(스프린트) 기록을 단축하려는 유저들이 많이 찾는 심플한 플랫폼입니다.",
+                    imageText: ""
+                }
+            ]
+        };
+
+        const rootFiles = [
+            {
+                filename: "README.md",
+                title: "TETRIS OS 소개",
+                colorClass: "text-gray-400",
+                shortDesc: "프로젝트 개요 및 안내서",
+                detailDesc: "TETRIS OS 아카이브에 오신 것을 환영합니다!\n\n이 프로젝트는 테트리스를 사랑하는 유저들을 위한 정보 큐레이션 서비스입니다.\n\n[주요 기능]\n- GUI와 터미널(CLI) 완벽 연동\n- Tab 키를 이용한 명령어 자동완성\n- 디렉토리 기반 탐색 시스템\n\n명령어 'help'를 입력하여 더 많은 정보를 확인하세요.",
+                imageText: ""
+            }
+        ];
+
+        // 상태 변수
+        let currentPath = '/';
+
+        // --- 2. GUI 렌더링 (디렉토리 및 파일 표시) ---
+        const gallery = document.getElementById('gallery');
+        const guiPathDisplay = document.getElementById('gui-path-display');
+        const cliPathPrompt = document.getElementById('cli-path-prompt');
+
+        function renderGUI() {
+            gallery.innerHTML = ''; 
+            
+            // 경로 표시 업데이트
+            const displayPath = currentPath === '/' ? '/' : `/${currentPath}`;
+            guiPathDisplay.textContent = displayPath;
+            cliPathPrompt.textContent = `${displayPath} >`;
+
+            if (currentPath === '/') {
+                // 루트 디렉토리: 폴더들 렌더링
+                Object.keys(fileSystem).forEach(dirName => {
+                    const card = document.createElement('div');
+                    card.className = `card-enter flex flex-col justify-center items-center h-48 bg-white dark:bg-gray-900 rounded-xl shadow-lg border-2 border-gray-200 dark:border-gray-800 cursor-pointer hover:-translate-y-2 hover:border-tetris-yellow hover:shadow-[0_10px_20px_rgba(255,255,0,0.2)] transition-all duration-300 group`;
+                    card.onclick = () => executeCommand(`cd ${dirName}`, true);
+
+                    card.innerHTML = `
+                        <svg class="w-16 h-16 text-gray-400 group-hover:text-tetris-yellow mb-2 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                        <h3 class="text-xl font-bold retro-text text-gray-800 dark:text-gray-200 group-hover:text-tetris-yellow transition-colors">${dirName}/</h3>
+                        <span class="text-xs text-gray-500 mt-2 font-mono">DIR</span>
+                    `;
+                    gallery.appendChild(card);
+                });
+
+                // 루트 디렉토리: 파일들 렌더링 (README.md 등)
+                rootFiles.forEach(data => {
+                    const card = document.createElement('div');
+                    card.className = `card-enter flex flex-col justify-between h-48 bg-white dark:bg-gray-900 rounded-xl shadow-lg border-l-4 border-gray-400 dark:border-gray-600 cursor-pointer hover:-translate-y-2 hover:border-gray-400 hover:shadow-[0_10px_20px_rgba(156,163,175,0.2)] transition-all duration-300 group`;
+                    card.onclick = () => executeCommand(`cat ${data.filename}`, true);
+
+                    card.innerHTML = `
+                        <div class="p-6">
+                            <div class="flex items-center mb-3">
+                                <svg class="w-6 h-6 mr-2 ${data.colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                <h3 class="text-lg font-bold retro-text group-hover:text-gray-400 transition-colors truncate">${data.filename}</h3>
+                            </div>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm font-sans line-clamp-2">${data.shortDesc}</p>
+                        </div>
+                        <div class="px-6 py-2 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800">
+                            <span class="text-xs font-retro text-gray-400 group-hover:text-gray-500 transition-colors">📄 FILE</span>
+                        </div>
+                    `;
+                    gallery.appendChild(card);
+                });
+
+            } else {
+                // 특정 폴더 내부: [뒤로가기] + 파일들 렌더링
+                const backCard = document.createElement('div');
+                backCard.className = `card-enter flex flex-col justify-center items-center h-48 bg-gray-100 dark:bg-gray-800 rounded-xl shadow-md border-2 border-dashed border-gray-400 dark:border-gray-600 cursor-pointer hover:-translate-y-1 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-300`;
+                backCard.onclick = () => executeCommand(`cd ..`, true);
+                backCard.innerHTML = `
+                    <svg class="w-12 h-12 text-gray-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"></path></svg>
+                    <h3 class="text-lg font-bold retro-text text-gray-600 dark:text-gray-400">.. (상위로)</h3>
+                `;
+                gallery.appendChild(backCard);
+
+                // 파일 카드들
+                const files = fileSystem[currentPath];
+                if (files) {
+                    files.forEach(data => {
+                        const card = document.createElement('div');
+                        card.className = `card-enter flex flex-col justify-between h-48 bg-white dark:bg-gray-900 rounded-xl shadow-lg border-l-4 border-gray-300 dark:border-gray-700 cursor-pointer hover:-translate-y-2 hover:border-tetris-cyan hover:shadow-[0_10px_20px_rgba(0,255,255,0.2)] transition-all duration-300 group`;
+                        card.onclick = () => executeCommand(`cat ${data.filename}`, true);
+
+                        card.innerHTML = `
+                            <div class="p-6">
+                                <div class="flex items-center mb-3">
+                                    <svg class="w-6 h-6 mr-2 ${data.colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                    <h3 class="text-lg font-bold retro-text group-hover:text-tetris-cyan transition-colors truncate">${data.filename}</h3>
+                                </div>
+                                <p class="text-gray-600 dark:text-gray-400 text-sm font-sans line-clamp-2">${data.shortDesc}</p>
+                            </div>
+                            <div class="px-6 py-2 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800">
+                                <span class="text-xs font-retro text-gray-400 group-hover:text-tetris-cyan transition-colors">📄 FILE</span>
+                            </div>
+                        `;
+                        gallery.appendChild(card);
+                    });
+                }
+            }
+            setupIntersectionObserver();
+        }
+
+        // --- 3. 모달 (팝업 문서 뷰어) ---
+        const modal = document.getElementById('modal');
+        const modalBox = document.getElementById('modal-content-box');
+        
+        function openModal(data) {
+            document.getElementById('modal-title').textContent = data.filename;
+            document.getElementById('modal-subtitle').textContent = data.title;
+            document.getElementById('modal-desc').textContent = data.detailDesc;
+            
+            const header = document.getElementById('modal-header');
+            header.className = `px-6 py-4 border-b-4 flex justify-between items-center bg-gray-100 dark:bg-gray-800`;
+            header.classList.add(data.colorClass.replace('text-', 'border-'));
+
+            const imgContainer = document.getElementById('modal-image-container');
+            imgContainer.className = `w-full h-64 rounded-lg mb-6 flex items-center justify-center text-white text-lg font-bold opacity-80 shadow-inner bg-gray-800`;
+            imgContainer.classList.add(data.colorClass.replace('text-', 'bg-'));
+            if (data.imageText && (data.imageText.startsWith('http') || data.imageText.match(/\.(jpeg|jpg|gif|png|webp)$/i))) {
+                imgContainer.innerHTML = `<img src="${data.imageText}" alt="${data.title}" class="w-full h-full object-contain bg-black/40" onerror="this.onerror=null; this.parentElement.textContent='[이미지를 불러올 수 없습니다]';">`;
+            } else {
+                imgContainer.classList.add('opacity-80');
+                imgContainer.textContent = data.imageText;
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalBox.classList.remove('scale-95');
+                modalBox.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeModal() {
+            modal.classList.add('opacity-0');
+            modalBox.classList.remove('scale-100');
+            modalBox.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        }
+
+        document.getElementById('close-modal').addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
+
+        // --- 4. 터미널(CLI) 및 하이브리드 제어 로직 ---
+        const terminalInput = document.getElementById('terminal-input');
+        const terminalOutput = document.getElementById('terminal-output');
+        const terminalContainer = document.getElementById('terminal-container');
+        const terminalWrapper = document.getElementById('terminal-wrapper');
+
+        const commandHistory = [];
+        let historyIndex = -1;
+
+        terminalWrapper.addEventListener('click', () => terminalInput.focus());
+
+        function printToTerminal(text, isUser = false) {
+            const line = document.createElement('div');
+            if (isUser) {
+                line.className = 'text-white mt-2 mb-1 retro-text';
+                line.textContent = `${currentPath === '/' ? '/' : '/'+currentPath} > ${text}`;
+            } else {
+                line.className = 'text-gray-300 ml-4 mb-1';
+                line.innerHTML = text;
+            }
+            terminalOutput.appendChild(line);
+            terminalContainer.scrollTop = terminalContainer.scrollHeight;
+        }
+
+        // 핵심: GUI 클릭이나 키보드 입력 모두 이 함수를 거쳐 처리됨
+        function executeCommand(fullCommand, isFromGUI = false) {
+            if (!fullCommand.trim()) return;
+
+            if (isFromGUI) {
+                printToTerminal(fullCommand, true);
+            } else {
+                commandHistory.push(fullCommand);
+                historyIndex = commandHistory.length;
+                printToTerminal(fullCommand, true);
+                terminalInput.value = '';
+            }
+            
+            const args = fullCommand.trim().split(' ').filter(Boolean);
+            const command = args[0].toLowerCase();
+            
+            // 파일명(target)의 경우 대소문자 구분을 없애기 위해 toLowerCase()를 호출하지만, 원본 텍스트도 보존합니다.
+            const target = args[1] ? args[1].toLowerCase() : '';
+
+            switch (command) {
+                case 'help':
+                case '?':
+                    printToTerminal("<b>[TETRIS OS 명령어 목록]</b>");
+                    printToTerminal("- <span class='text-tetris-yellow'>ls</span> : 현재 경로의 폴더 및 파일 목록 보기");
+                    printToTerminal("- <span class='text-tetris-yellow'>cd [폴더명]</span> : 폴더 이동 (예: cd beginner, cd ..)");
+                    printToTerminal("- <span class='text-tetris-yellow'>cat [파일명]</span> 또는 <span class='text-tetris-yellow'>open [파일명]</span> : 문서 열기 (예: cat basic.txt)");
+                    printToTerminal("- <span class='text-tetris-yellow'>close</span> 또는 <span class='text-tetris-yellow'>exit</span> : 열려있는 문서 창 닫기");
+                    printToTerminal("- <span class='text-tetris-yellow'>clear</span> : 터미널 화면 지우기");
+                    printToTerminal("- <span class='text-tetris-yellow'>theme [light/dark]</span> : 테마 변경");
+                    break;
+                case 'ls':
+                    if (currentPath === '/') {
+                        const dirs = Object.keys(fileSystem).map(d => `<span class="text-tetris-yellow">${d}/</span>`).join('  ');
+                        const files = rootFiles.map(f => `<span class="text-tetris-cyan">${f.filename}</span>`).join('  ');
+                        printToTerminal(`목록: &nbsp; ${dirs}  ${files}`);
+                    } else {
+                        const files = fileSystem[currentPath].map(f => `<span class="text-tetris-cyan">${f.filename}</span>`).join('  ');
+                        printToTerminal(`파일: &nbsp; ${files}`);
+                    }
+                    break;
+                case 'cd':
+                    if (!target) {
+                        printToTerminal("<span class='text-red-400'>오류: 이동할 폴더명을 입력해주세요.</span>");
+                    } else if (target === '..') {
+                        if (currentPath !== '/') {
+                            currentPath = '/';
+                            renderGUI();
+                        }
+                    } else if (currentPath === '/' && Object.keys(fileSystem).some(k => k.toLowerCase() === target)) {
+                        currentPath = Object.keys(fileSystem).find(k => k.toLowerCase() === target);
+                        renderGUI();
+                    } else {
+                        printToTerminal(`<span class="text-red-400">오류: '${args[1]}' 폴더를 찾을 수 없습니다.</span>`);
+                    }
+                    break;
+                case 'cat':
+                case 'open':
+                    if (!target) {
+                        printToTerminal("<span class='text-red-400'>오류: 읽을 파일명을 입력해주세요. (예: cat basic.txt)</span>");
+                        break;
+                    }
+                    
+                    let fileData;
+                    if (currentPath === '/') {
+                        // 입력값과 실제 파일명을 모두 소문자로 변환하여 비교 (대소문자 구별 버그 픽스)
+                        fileData = rootFiles.find(f => f.filename.toLowerCase() === target);
+                    } else {
+                        fileData = fileSystem[currentPath].find(f => f.filename.toLowerCase() === target);
+                    }
+
+                    if (fileData) {
+                        openModal(fileData);
+                        printToTerminal(`문서 뷰어에서 '<span class="text-tetris-cyan">${fileData.filename}</span>' 파일을 열었습니다.`);
+                    } else {
+                        printToTerminal(`<span class="text-red-400">오류: '${args[1]}' 파일을 찾을 수 없습니다.</span>`);
+                    }
+                    break;
+                case 'clear':
+                    terminalOutput.innerHTML = '';
+                    break;
+                case 'close':
+                case 'exit':
+                    closeModal();
+                    printToTerminal("창을 닫았습니다.");
+                    break;
+                case 'theme':
+                    const htmlElement = document.documentElement;
+                    if (target === 'light') {
+                        htmlElement.classList.remove('dark');
+                        htmlElement.classList.add('light');
+                        localStorage.setItem('theme', 'light');
+                        printToTerminal("✨ 라이트 모드로 전환되었습니다.");
+                    } else if (target === 'dark') {
+                        htmlElement.classList.add('dark');
+                        htmlElement.classList.remove('light');
+                        localStorage.setItem('theme', 'dark');
+                        printToTerminal("🌙 다크 모드로 전환되었습니다.");
+                    } else {
+                        printToTerminal("<span class='text-red-400'>오류: 'theme light' 또는 'theme dark'를 입력하세요.</span>");
+                    }
+                    break;
+                default:
+                    printToTerminal(`<span class="text-red-400">오류: '${command}'은(는) 알 수 없는 명령어입니다. 'help'를 입력해보세요.</span>`);
+            }
+        }
+
+        // --- 5. 키보드 입력 이벤트 (Tab 자동완성 및 화살표 히스토리) ---
+        terminalInput.addEventListener('keydown', (e) => {
+            
+            if (e.key === 'Enter') {
+                executeCommand(terminalInput.value);
+            } 
+            else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    terminalInput.value = commandHistory[historyIndex];
+                }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (historyIndex < commandHistory.length - 1) {
+                    historyIndex++;
+                    terminalInput.value = commandHistory[historyIndex];
+                } else {
+                    historyIndex = commandHistory.length;
+                    terminalInput.value = '';
+                }
+            } 
+            else if (e.key === 'Tab') {
+                e.preventDefault(); 
+                
+                const val = terminalInput.value.trimStart();
+                if (!val) return;
+
+                const args = val.split(' ');
+                const lastArg = args[args.length - 1].toLowerCase(); // 검색용 소문자
+
+                if (args.length === 1) {
+                    const cmds = ['help', 'ls', 'cd', 'cat', 'open', 'clear', 'theme', 'close', 'exit'];
+                    const matches = cmds.filter(c => c.startsWith(lastArg));
+                    
+                    if (matches.length === 1) {
+                        terminalInput.value = matches[0] + ' '; 
+                    } else if (matches.length > 1) {
+                        printToTerminal(val, true); 
+                        printToTerminal(matches.map(m => `<span class="text-tetris-purple">${m}</span>`).join('  '));
+                    }
+                } 
+                else if (args.length === 2) {
+                    const cmd = args[0].toLowerCase();
+                    let options = [];
+
+                    if (cmd === 'cd') {
+                        if (currentPath === '/') options = Object.keys(fileSystem);
+                        else options = ['..'];
+                    } 
+                    else if (cmd === 'cat' || cmd === 'open') {
+                        if (currentPath === '/') {
+                            options = rootFiles.map(f => f.filename);
+                        } else {
+                            options = fileSystem[currentPath].map(f => f.filename);
+                        }
+                    }
+
+                    // 대소문자 무시하고 매칭하되 원본 배열의 값을 반환
+                    const matches = options.filter(o => o.toLowerCase().startsWith(lastArg));
+                    if (matches.length === 1) {
+                        // 정확한 대소문자(matches[0])를 사용하여 터미널 자동완성
+                        terminalInput.value = `${cmd} ${matches[0]} `;
+                    } else if (matches.length > 1) {
+                        printToTerminal(val, true);
+                        printToTerminal(matches.map(m => `<span class="text-tetris-yellow">${m}</span>`).join('  '));
+                    }
+                }
+            }
+        });
+
+        // --- 기타 공통 UI 로직 ---
+        function setupIntersectionObserver() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) entry.target.classList.add('visible');
+                });
+            }, { threshold: 0.1 });
+            document.querySelectorAll('.card-enter').forEach(card => observer.observe(card));
+        }
+
+        window.addEventListener('scroll', () => {
+            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            document.getElementById('scroll-progress-bar').style.width = (winScroll / height) * 100 + "%";
+        });
+
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+            executeCommand(document.documentElement.classList.contains('dark') ? 'theme light' : 'theme dark', true);
+        });
+
+        // --- 초기화 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('theme') === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            }
+            renderGUI(); 
+        });
+
+    </script>
+</body>
+</html>
